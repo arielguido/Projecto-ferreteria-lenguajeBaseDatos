@@ -1,0 +1,255 @@
+SET SERVEROUTPUT ON;
+--CURSOR 1--
+DECLARE
+  v_promedio_compra NUMBER;
+  v_promedio_venta NUMBER;
+BEGIN
+  SELECT AVG(Precio_compra) INTO v_promedio_compra FROM Precios;
+  SELECT AVG(Precio_venta) INTO v_promedio_venta FROM Precios;
+
+  DBMS_OUTPUT.PUT_LINE('Promedio de precios de compra: ' || v_promedio_compra);
+  DBMS_OUTPUT.PUT_LINE('Promedio de precios de venta: ' || v_promedio_venta);
+  -- Aquí puedes realizar operaciones o análisis con los promedios de precios
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    DBMS_OUTPUT.PUT_LINE('No se encontraron registros en la tabla de precios.');
+END;
+/
+
+--CURSOR 2--
+DECLARE
+  v_id_producto NUMBER := 39; -- Reemplaza 123 con el ID del producto que deseas consultar
+  v_cantidad_actual NUMBER;
+BEGIN
+  SELECT Cantidad_actual INTO v_cantidad_actual
+  FROM Inventario
+  WHERE ID_producto = v_id_producto;
+
+  DBMS_OUTPUT.PUT_LINE('Producto con ID ' || v_id_producto || ', Cantidad actual en inventario: ' || v_cantidad_actual);
+  -- Aquí puedes realizar operaciones o análisis con la cantidad actual en inventario del producto
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    DBMS_OUTPUT.PUT_LINE('Producto con ID ' || v_id_producto || ' no encontrado en el inventario.');
+END;
+/
+
+
+--CURSOR 3--
+DECLARE
+    CURSOR c_productos_mas_vendidos IS
+        SELECT v.ID_PRODUCTO, p.NOMBRE, SUM(v.CANTIDAD) AS TOTAL_VENDIDO
+        FROM VENTAS v
+        JOIN PRODUCTOS p ON v.ID_PRODUCTO = p.ID_PRODUCTO
+        GROUP BY v.ID_PRODUCTO, p.NOMBRE
+        ORDER BY TOTAL_VENDIDO DESC;
+    
+    v_id_producto NUMBER;
+    v_nombre_producto VARCHAR2(100);
+    v_total_vendido NUMBER;
+BEGIN
+    OPEN c_productos_mas_vendidos;
+    FETCH c_productos_mas_vendidos INTO v_id_producto, v_nombre_producto, v_total_vendido;
+    
+    IF c_productos_mas_vendidos%FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('Producto más vendido:');
+        DBMS_OUTPUT.PUT_LINE('ID Producto: ' || v_id_producto);
+        DBMS_OUTPUT.PUT_LINE('Nombre Producto: ' || v_nombre_producto);
+        DBMS_OUTPUT.PUT_LINE('Total Vendido: ' || v_total_vendido);
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('No hay datos de ventas.');
+    END IF;
+    
+    CLOSE c_productos_mas_vendidos;
+END;
+/
+
+--CURSOR 4--
+DECLARE
+  CURSOR c_productos_precio_bajo_promedio IS
+    SELECT p.ID_producto, p.Nombre, pr.Precio_venta
+    FROM Productos p
+    JOIN Precios pr ON p.ID_producto = pr.ID_producto
+    WHERE pr.Precio_venta < (SELECT AVG(Precio_venta) FROM Precios);
+BEGIN
+  FOR producto IN c_productos_precio_bajo_promedio LOOP
+    DBMS_OUTPUT.PUT_LINE('Producto: ' || producto.Nombre || ', Precio de venta: ' || producto.Precio_venta);
+    -- Aquí puedes realizar operaciones o análisis sobre los productos con precios bajos
+  END LOOP;
+END;
+/
+
+
+--CURSOR 5--
+
+DECLARE
+    v_cursor SYS_REFCURSOR;
+    v_cliente CLIENTES%ROWTYPE;
+BEGIN
+    OPEN v_cursor FOR
+        SELECT c.*
+        FROM CLIENTES c
+        JOIN VENTAS v ON c.ID_CLIENTE = v.ID_CLIENTE
+        GROUP BY c.ID_CLIENTE, c.NOMBRE, c.DIRECCION, c.TELEFONO, c.CORREO_ELECTRONICO, c.ESTADO_CLIENTE
+        HAVING COUNT(DISTINCT v.FECHA_VENTA) > 1;
+
+    LOOP
+        FETCH v_cursor INTO v_cliente;
+        EXIT WHEN v_cursor%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('ID Cliente: ' || v_cliente.ID_CLIENTE);
+        DBMS_OUTPUT.PUT_LINE('Nombre: ' || v_cliente.NOMBRE);
+        DBMS_OUTPUT.PUT_LINE('Dirección: ' || v_cliente.DIRECCION);
+        DBMS_OUTPUT.PUT_LINE('Teléfono: ' || v_cliente.TELEFONO);
+        DBMS_OUTPUT.PUT_LINE('Correo Electrónico: ' || v_cliente.CORREO_ELECTRONICO);
+        DBMS_OUTPUT.PUT_LINE('Estado Cliente: ' || v_cliente.ESTADO_CLIENTE);
+        DBMS_OUTPUT.PUT_LINE('----------------------');
+    END LOOP;
+
+    CLOSE v_cursor;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error al obtener los clientes que han realizado compras en más de una fecha.');
+        DBMS_OUTPUT.PUT_LINE('Mensaje de error: ' || SQLERRM);
+        CLOSE v_cursor;
+END;
+/
+
+--CURSOR 6--
+DECLARE
+    v_cursor SYS_REFCURSOR;
+    v_producto PRODUCTOS%ROWTYPE;
+    v_descripcion VARCHAR2(100) := 'Gafas'; -- Cambiar por descripción deseada
+BEGIN
+    OPEN v_cursor FOR
+        SELECT p.*
+        FROM PRODUCTOS p
+        WHERE p.DESCRIPCION LIKE '%' || v_descripcion || '%';
+
+    LOOP
+        FETCH v_cursor INTO v_producto;
+        EXIT WHEN v_cursor%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('ID Producto: ' || v_producto.ID_PRODUCTO);
+        DBMS_OUTPUT.PUT_LINE('Nombre: ' || v_producto.NOMBRE);
+        DBMS_OUTPUT.PUT_LINE('Descripción: ' || v_producto.DESCRIPCION);
+        DBMS_OUTPUT.PUT_LINE('Código: ' || v_producto.CODIGO);
+        DBMS_OUTPUT.PUT_LINE('Unidad de Medida: ' || v_producto.UNIDAD_MEDIDA);
+        DBMS_OUTPUT.PUT_LINE('----------------------');
+    END LOOP;
+
+    CLOSE v_cursor;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error al obtener los productos con descripción similar.');
+        DBMS_OUTPUT.PUT_LINE('Mensaje de error: ' || SQLERRM);
+        CLOSE v_cursor;
+END;
+/
+
+--CURSOR 7--
+DECLARE
+    v_cursor SYS_REFCURSOR;
+    v_producto PRODUCTOS%ROWTYPE;
+    v_margen_limite NUMBER := 60; -- Cambiar por el límite de margen deseado
+BEGIN
+    OPEN v_cursor FOR
+        SELECT p.*
+        FROM PRODUCTOS p
+        JOIN PRECIOS pr ON p.ID_PRODUCTO = pr.ID_PRODUCTO
+        WHERE (pr.PRECIO_VENTA - pr.PRECIO_COMPRA) / pr.PRECIO_COMPRA * 100 > v_margen_limite;
+
+    LOOP
+        FETCH v_cursor INTO v_producto;
+        EXIT WHEN v_cursor%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('ID Producto: ' || v_producto.ID_PRODUCTO);
+        DBMS_OUTPUT.PUT_LINE('Nombre: ' || v_producto.NOMBRE);
+        DBMS_OUTPUT.PUT_LINE('Descripción: ' || v_producto.DESCRIPCION);
+        DBMS_OUTPUT.PUT_LINE('Código: ' || v_producto.CODIGO);
+        DBMS_OUTPUT.PUT_LINE('Unidad de Medida: ' || v_producto.UNIDAD_MEDIDA);
+        DBMS_OUTPUT.PUT_LINE('----------------------');
+    END LOOP;
+
+    CLOSE v_cursor;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error al obtener los productos con mayor margen de beneficio.');
+        DBMS_OUTPUT.PUT_LINE('Mensaje de error: ' || SQLERRM);
+        CLOSE v_cursor;
+END;
+/
+
+--CURSOR 8--
+DECLARE
+    v_cursor SYS_REFCURSOR;
+    v_cliente CLIENTES%ROWTYPE;
+BEGIN
+    OPEN v_cursor FOR
+        SELECT c.*
+        FROM CLIENTES c
+        JOIN VENTAS v ON c.ID_CLIENTE = v.ID_CLIENTE
+        GROUP BY c.ID_CLIENTE, c.NOMBRE, c.DIRECCION, c.TELEFONO, c.CORREO_ELECTRONICO, c.ESTADO_CLIENTE
+        HAVING COUNT(*) > 1;
+
+    LOOP
+        FETCH v_cursor INTO v_cliente;
+        EXIT WHEN v_cursor%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('ID Cliente: ' || v_cliente.ID_CLIENTE);
+        DBMS_OUTPUT.PUT_LINE('Nombre: ' || v_cliente.NOMBRE);
+        DBMS_OUTPUT.PUT_LINE('Dirección: ' || v_cliente.DIRECCION);
+        DBMS_OUTPUT.PUT_LINE('Teléfono: ' || v_cliente.TELEFONO);
+        DBMS_OUTPUT.PUT_LINE('Correo Electrónico: ' || v_cliente.CORREO_ELECTRONICO);
+        DBMS_OUTPUT.PUT_LINE('Estado Cliente: ' || v_cliente.ESTADO_CLIENTE);
+        DBMS_OUTPUT.PUT_LINE('----------------------');
+    END LOOP;
+
+    CLOSE v_cursor;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error al obtener los clientes con más compras.');
+        DBMS_OUTPUT.PUT_LINE('Mensaje de error: ' || SQLERRM);
+        CLOSE v_cursor;
+END;
+/
+
+--CURSOR 9--
+
+DECLARE
+    v_cursor SYS_REFCURSOR;
+    v_producto PRODUCTOS%ROWTYPE;
+BEGIN
+    OPEN v_cursor FOR
+        SELECT p.*
+        FROM PRODUCTOS p
+        WHERE p.ID_PRODUCTO IN (
+            SELECT pr.ID_PRODUCTO
+            FROM PRECIOS pr
+            WHERE (pr.PRECIO_VENTA - pr.PRECIO_COMPRA) / pr.PRECIO_COMPRA * 100 > 30
+        )
+        AND ROWNUM <= 1; -- Cambiar por la cantidad deseada de productos
+
+    LOOP
+        FETCH v_cursor INTO v_producto;
+        EXIT WHEN v_cursor%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('ID Producto: ' || v_producto.ID_PRODUCTO);
+        DBMS_OUTPUT.PUT_LINE('Nombre: ' || v_producto.NOMBRE);
+        DBMS_OUTPUT.PUT_LINE('Descripción: ' || v_producto.DESCRIPCION);
+        DBMS_OUTPUT.PUT_LINE('Código: ' || v_producto.CODIGO);
+        DBMS_OUTPUT.PUT_LINE('Unidad de Medida: ' || v_producto.UNIDAD_MEDIDA);
+        DBMS_OUTPUT.PUT_LINE('----------------------');
+    END LOOP;
+
+    CLOSE v_cursor;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error al obtener los productos con el margen de beneficio más alto.');
+        DBMS_OUTPUT.PUT_LINE('Mensaje de error: ' || SQLERRM);
+        CLOSE v_cursor;
+END;
+/
+
+--CURSOR 10--
+
+

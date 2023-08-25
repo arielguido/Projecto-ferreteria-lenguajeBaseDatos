@@ -1,0 +1,210 @@
+FUNCIONES 
+
+--FUNCIONES 1--
+DECLARE
+    v_resultado VARCHAR2(100);
+    v_id_producto NUMBER := 39; -- Cambiar por el ID del producto que deseas buscar
+BEGIN
+    v_resultado := buscar_producto_por_id(v_id_producto);
+    DBMS_OUTPUT.PUT_LINE(v_resultado);
+END;
+/
+
+--FUNCIONES 2--
+DECLARE
+    v_total_inventario NUMBER;
+    v_id_producto NUMBER := 39; -- Cambiar por el ID del producto que deseas calcular el total de inventario
+BEGIN
+    v_total_inventario := calcular_total_inventario_de_un_producto(v_id_producto);
+    DBMS_OUTPUT.PUT_LINE('El total en inventario del producto con ID ' || v_id_producto || ' es: ' || v_total_inventario);
+END;
+/
+
+--FUNCIONES 3--
+
+DECLARE
+    v_valor_total NUMBER;
+BEGIN
+    v_valor_total := calcular_valor_total_inventario();
+    DBMS_OUTPUT.PUT_LINE('El valor total en inventario es: ' || v_valor_total);
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error al calcular el valor total en inventario.');
+        DBMS_OUTPUT.PUT_LINE('Mensaje de error: ' || SQLERRM);
+        v_valor_total := NULL;
+END;
+/
+
+--FUNCIONES 4--
+
+DECLARE
+    v_cantidad_total NUMBER;
+BEGIN
+    v_cantidad_total := "OBTENER_CANTIDAD_TOTAL_CLIENTES"();
+    DBMS_OUTPUT.PUT_LINE('La cantidad total de clientes es: ' || v_cantidad_total);
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error al obtener la cantidad total de clientes.');
+        DBMS_OUTPUT.PUT_LINE('Mensaje de error: ' || SQLERRM);
+END;
+/
+
+--FUNCIONES 5--
+
+DECLARE
+    v_cantidad_total NUMBER;
+BEGIN
+    v_cantidad_total := "OBTENER_CANTIDAD_TOTAL_INVENTARIO"();
+    DBMS_OUTPUT.PUT_LINE('La cantidad total en inventario es: ' || v_cantidad_total);
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error al obtener la cantidad total en inventario.');
+        DBMS_OUTPUT.PUT_LINE('Mensaje de error: ' || SQLERRM);
+END;
+/
+
+--FUNCIONES 6--
+
+DECLARE
+    v_producto_info Productos%ROWTYPE;
+    v_id_producto NUMBER := 39; -- Cambiar por el ID del producto que deseas consultar
+BEGIN
+    v_producto_info := obtener_informacion_producto(v_id_producto);
+
+    IF v_producto_info.ID_PRODUCTO IS NOT NULL THEN
+        DBMS_OUTPUT.PUT_LINE('ID Producto: ' || v_producto_info.ID_PRODUCTO);
+        DBMS_OUTPUT.PUT_LINE('Nombre: ' || v_producto_info.NOMBRE);
+        DBMS_OUTPUT.PUT_LINE('Descripción: ' || v_producto_info.DESCRIPCION);
+        DBMS_OUTPUT.PUT_LINE('Código: ' || v_producto_info.CODIGO);
+        DBMS_OUTPUT.PUT_LINE('Unidad de Medida: ' || v_producto_info.UNIDAD_MEDIDA);
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('No se encontró información para el producto con ID ' || v_id_producto);
+    END IF;
+
+    -- CLOSE v_cursor; -- No es necesario cerrar el cursor aquí
+END;
+/
+
+--FUNCIONES 7--
+
+DECLARE
+    v_resultado VARCHAR2(200);
+BEGIN
+    v_resultado := realizar_compra(18, 40, 3); -- Cliente 1 compra 5 unidades del producto 101
+    DBMS_OUTPUT.PUT_LINE(v_resultado);
+END;
+/
+
+--FUNCIONES 8--
+
+DECLARE
+    v_id_producto NUMBER := 39; -- Cambiar por el ID del producto que deseas calcular el margen de beneficio
+    v_margen NUMBER;
+BEGIN
+    v_margen := calcular_margen_beneficio(v_id_producto);
+    DBMS_OUTPUT.PUT_LINE('El margen de beneficio para el producto con ID ' || v_id_producto || ' es: ' || v_margen || '%');
+END;
+/
+
+--FUNCIONES 9--
+
+DECLARE
+    v_cursor SYS_REFCURSOR;
+    v_producto_id NUMBER;
+    v_margen NUMBER;
+BEGIN
+    v_cursor := calcular_margen_beneficio_todosP;
+
+    LOOP
+        FETCH v_cursor INTO v_producto_id, v_margen;
+        EXIT WHEN v_cursor%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('ID Producto: ' || v_producto_id);
+        DBMS_OUTPUT.PUT_LINE('Margen de Beneficio: ' || v_margen || '%');
+        DBMS_OUTPUT.PUT_LINE('----------------------');
+    END LOOP;
+
+    CLOSE v_cursor;
+END;
+/
+--FUNCIONES 10--
+
+DECLARE
+    v_cursor SYS_REFCURSOR;
+    v_id_producto NUMBER;
+    v_nombre VARCHAR2(100);
+    v_descripcion VARCHAR2(200);
+    v_codigo VARCHAR2(50);
+    v_margen_beneficio NUMBER;
+    v_margen_limite NUMBER := 50; -- Cambiar por el límite de margen deseado
+BEGIN
+    v_cursor := obtener_productos_margen_bajo(v_margen_limite);
+
+    LOOP
+        FETCH v_cursor INTO v_id_producto, v_nombre, v_descripcion, v_codigo, v_margen_beneficio;
+        EXIT WHEN v_cursor%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('ID Producto: ' || v_id_producto);
+        DBMS_OUTPUT.PUT_LINE('Nombre: ' || v_nombre);
+        DBMS_OUTPUT.PUT_LINE('Descripción: ' || v_descripcion);
+        DBMS_OUTPUT.PUT_LINE('Código: ' || v_codigo);
+        DBMS_OUTPUT.PUT_LINE('Margen de Beneficio (%): ' || v_margen_beneficio);
+        DBMS_OUTPUT.PUT_LINE('----------------------');
+    END LOOP;
+
+    CLOSE v_cursor;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error al obtener los productos con margen de beneficio bajo.');
+        DBMS_OUTPUT.PUT_LINE('Mensaje de error: ' || SQLERRM);
+        CLOSE v_cursor;
+END;
+/
+
+--FUNCIONES 11--
+
+
+DECLARE
+    v_promedio NUMBER;
+BEGIN
+    v_promedio := obtener_promedio_precios;
+
+    DBMS_OUTPUT.PUT_LINE('El promedio de los precios de venta es: ' || v_promedio);
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error al obtener el promedio de precios de venta.');
+        DBMS_OUTPUT.PUT_LINE('Mensaje de error: ' || SQLERRM);
+END;
+/
+
+--FUNCIONES 12--
+
+DECLARE
+    v_cursor SYS_REFCURSOR;
+    v_id_cliente NUMBER;
+    v_nombre VARCHAR2(100);
+    v_direccion VARCHAR2(100);
+    v_telefono VARCHAR2(20);
+    v_correo VARCHAR2(100);
+BEGIN
+    v_cursor := obtener_clientes_inactivos_con_compras;
+
+    LOOP
+        FETCH v_cursor INTO v_id_cliente, v_nombre, v_direccion, v_telefono, v_correo;
+        EXIT WHEN v_cursor%NOTFOUND;
+
+        DBMS_OUTPUT.PUT_LINE('ID Cliente: ' || v_id_cliente);
+        DBMS_OUTPUT.PUT_LINE('Nombre: ' || v_nombre);
+        DBMS_OUTPUT.PUT_LINE('Dirección: ' || v_direccion);
+        DBMS_OUTPUT.PUT_LINE('Teléfono: ' || v_telefono);
+        DBMS_OUTPUT.PUT_LINE('Correo Electrónico: ' || v_correo);
+        DBMS_OUTPUT.PUT_LINE('----------------------');
+    END LOOP;
+
+    CLOSE v_cursor;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error al obtener los clientes inactivos con compras.');
+        DBMS_OUTPUT.PUT_LINE('Mensaje de error: ' || SQLERRM);
+        CLOSE v_cursor;
+END;
